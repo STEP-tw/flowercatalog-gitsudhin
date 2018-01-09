@@ -76,6 +76,14 @@ let servePage=function(req,res){
   serveContent.call(res,fileUrl);
 };
 
+const parseToHTML=function(commentsList){
+  let content="";
+  commentsList.forEach( (comment)=>{
+    content+=`<pre>${comment.date} ${comment.name} ${comment.comment}</pre>`
+  });
+  return content;
+};
+
 let app = WebApp.create();
 
 app.use(logRequest);
@@ -107,7 +115,7 @@ app.post('/login',(req,res)=>{
 app.get('/guestBook.html',(req,res)=>{
   let dbFileContent=JSON.parse(getFileContent('./data/comments.json'));
   let fileContent=getFileContent('./public/guestBook.html');
-
+  
   res.write(fileContent);
   res.end();
 });
