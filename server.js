@@ -4,7 +4,41 @@ const http = require('http');
 const WebApp = require('./webapp');
 
 let registered_users = [{userName:'sudhin',name:'Sudhin MN'}];
+
+
 let toStr = obj=>JSON.stringify(obj,null,2);
+
+let logRequest = (req,res)=>{
+  let text = ['------------------------------',
+    `${timeStamp()}`,
+    `${req.method} ${req.url}`,
+    `HEADERS=> ${toStr(req.headers)}`,
+    `COOKIES=> ${toStr(req.cookies)}`,
+    `BODY=> ${toStr(req.body)}`,''].join('\n');
+  fs.appendFile('request.log',text,()=>{});
+
+  console.log(`${req.method} ${req.url}`);
+}
+
+let loadUser = (req,res)=>{
+  let sessionid = req.cookies.sessionid;
+  let user = registered_users.find(u=>u.sessionid==sessionid);
+  if(sessionid && user){
+    req.user = user;
+  }
+};
+
+let servePage=function(req,res){
+  let fileUrl='./public'+req.url;
+  if(fs.existsSync(fileUrl)){
+    try{
+      let fileContent=getFileContent(fileUrl,null);
+      setContentType(fileUrl,res);
+      res.write(fileContent);
+      res.end();
+    }catch(ex){}
+  }
+};
 
 const getContentType=function(extension){
   let contentType={
@@ -44,37 +78,6 @@ const writeComments=function(filename,res){
   });
 };
 
-let logRequest = (req,res)=>{
-  console.log(`${timeStamp()} ${req.method} ${req.url}`);
-  console.log(`COOKIES=> ${toStr(req.cookies)}`);
-  console.log(`BODY=> ${toStr(req.body)}`);
-
-}
-
-let loadUser = (req,res)=>{
-  let sessionid = req.cookies.sessionid;
-  let user = registered_users.find(u=>u.sessionid==sessionid);
-  if(sessionid && user){
-    req.user = user;
-  }
-};
-
-const serveContent=function(fileUrl){
-  if(fs.existsSync(fileUrl)){
-    try{
-      let fileContent=fs.readFileSync(fileUrl);
-      setContentType(fileUrl,this);
-      this.write(fileContent);
-      this.end();
-    }catch(ex){}
-  }
-};
-
-let servePage=function(req,res){
-  let fileUrl='./public'+req.url;
-  serveContent.call(res,fileUrl);
-};
-
 const parseToHTML=function(commentsList){
   let content="";
   commentsList.forEach( (comment)=>{
@@ -83,34 +86,29 @@ const parseToHTML=function(commentsList){
   return content;
 };
 
-let app = WebApp.create();
-
-app.use(logRequest);
-app.use(loadUser);
-app.get('/',(req,res)=>{res.redirect('index.html')});
-app.get('/login',(req,res)=>{
+const getLoginPage=function(req,res){
   res.setHeader('Content-type','text/html');
   if(req.cookies.logInFailed){
     res.write('<p>Login Failed</p>');
   }
   res.write('<form method="POST"> <input name="userName"><input name="place"> <input type="submit"></form>');
   res.end();
-});
-app.post('/login',(req,res)=>{
+};
+
+const validatePostUserData=function(req,res){
   let user = registered_users.find(u=>u.userName==req.body.userName);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
     res.redirect('/login');
     return;
-  }else{
-    res.setHeader('Set-Cookie',`logInFailed=false`);
   }
   let sessionid = new Date().getTime();
   res.setHeader('Set-Cookie',`sessionid=${sessionid}`);
   user.sessionid = sessionid;
   res.redirect('/guestBook.html');
-});
-app.get('/guestBook.html',(req,res)=>{
+};
+
+const serveGuestBookPage=function(req,res){
   let dbFileContent=JSON.parse(getFileContent('./data/comments.json'));
   let fileContent=getFileContent('./public/guestBook.html');
   let parsedDb=parseToHTML(dbFileContent);
@@ -120,8 +118,9 @@ app.get('/guestBook.html',(req,res)=>{
   }
   res.write(fileContent);
   res.end();
-});
-app.post('/guestBook.html',(req,res)=>{
+};
+
+const addNewComment=function(req,res){
   let user = registered_users.find(u=>u.userName==req.body.name);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
@@ -140,7 +139,17 @@ app.post('/guestBook.html',(req,res)=>{
   req.body.date=date;
   writeToFile(req.body,dbFile);
   res.redirect('/guestBook.html');
-});
+};
+
+let app = WebApp.create();
+
+app.use(logRequest);
+app.use(loadUser);
+app.get('/',(req,res)=>{res.redirect('index.html')});
+app.get('/login',getLoginPage);
+app.post('/login',validatePostUserData);
+app.get('/guestBook.html',serveGuestBookPage);
+app.post('/guestBook.html',addNewComment);
 app.postprocess(servePage);
 
 const PORT = 5000;
