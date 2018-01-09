@@ -3,7 +3,7 @@ const timeStamp = require('./time.js').timeStamp;
 const http = require('http');
 const WebApp = require('./webapp');
 
-let registered_users = [{userName:'bhanutv',name:'Bhanu Teja Verma'},{userName:'harshab',name:'Harsha Vardhana'}];
+let registered_users = [{userName:'sudhin',name:'Sudhin MN'}];
 let toStr = obj=>JSON.stringify(obj,null,2);
 
 const getContentType=function(extension){
@@ -25,11 +25,16 @@ const setContentType=function(fileUrl,res){
   res.setHeader('content-type',contentType);
 };
 
+const getFileContent=function(file,encoding='utf8'){
+  return fs.readFileSync(file,encoding);
+};
+
 const writeToFile=function(content,filename){
-  let existingData=fs.readFileSync(filename,'utf8');
+  console.log('Entering');
+  let existingData=getFileContent(filename);
   let newData=JSON.parse(existingData);
   newData.unshift(content);
-  fs.writeFileSync(filename,JSON.stringify(newData));
+  fs.writeFileSync(filename,JSON.stringify(newData,null,2));
 };
 
 const writeComments=function(filename,res){
@@ -44,6 +49,7 @@ let logRequest = (req,res)=>{
   console.log(`${timeStamp()} ${req.method} ${req.url}`);
   console.log(`COOKIES=> ${toStr(req.cookies)}`);
   console.log(`BODY=> ${toStr(req.body)}`);
+
 }
 
 let loadUser = (req,res)=>{
@@ -76,15 +82,22 @@ app.use(logRequest);
 app.use(loadUser);
 app.get('/login',(req,res)=>{
   res.setHeader('Content-type','text/html');
-  if(req.cookies.logInFailed) res.write('<p>logIn Failed</p>');
+  if(req.cookies.logInFailed){
+    res.write('<p>Login Failed</p>');
+  }
   res.write('<form method="POST"> <input name="userName"><input name="place"> <input type="submit"></form>');
+  res.end();
 });
 app.post('/login',(req,res)=>{
   let user = registered_users.find(u=>u.userName==req.body.userName);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
-    res.redirect('/guestBook.html');
+    res.redirect('/login');
     return;
+  }else{
+    res.setHeader('Set-Cookie',`logInFailed=false`);
+    res.redirect('/login');
+    return
   }
   let sessionid = new Date().getTime();
   res.setHeader('Set-Cookie',`sessionid=${sessionid}`);
@@ -92,31 +105,31 @@ app.post('/login',(req,res)=>{
   res.redirect('/guestBook.html');
 });
 app.get('/guestBook.html',(req,res)=>{
-  serveContent.call(res,'./public/guestBook.html');
-  if(req.cookies.logInFailed) res.write('<p>logIn Failed</p>');
-  let dbFile='./data/commentDatabase2.txt';
-  writeComments(dbFile,res);
+  let dbFileContent=JSON.parse(getFileContent('./data/comments.json'));
+  let fileContent=getFileContent('./public/guestBook.html');
+
+  res.write(fileContent);
+  res.end();
 });
 app.post('/guestBook.html',(req,res)=>{
-  console.log('Entering post');
-  let user = registered_users.find(u=>u.userName==req.body.userName);
+  let user = registered_users.find(u=>u.userName==req.body.name);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
-    // document.getElementsByClassName('loginStatusBlock').innerText="Login Failed";
-    res.redirect('/guestBook.html');
+    res.redirect('/login');
     return;
   }else{
-    let sessionid = new Date().getTime();
-    // res.setHeader('Set-Cookie',`sessionid=${sessionid}`);
-    user.sessionid = sessionid;
-
-    let date=new Date();
-    let dbFile='./data/commentDatabase2.txt';
-    date=date.toLocaleString();
-    req.body.date=date;
-    writeToFile(req.body,dbFile);
-    res.redirect('/guestBook.html');
+    res.setHeader('Set-Cookie',`logInFailed=false`);
   }
+  let sessionid = new Date().getTime();
+  res.setHeader('Set-Cookie','sessionid=${sessionid}');
+  user.sessionid = sessionid;
+
+  let date=new Date();
+  let dbFile='./data/comments.json';
+  date=date.toLocaleString();
+  req.body.date=date;
+  writeToFile(req.body,dbFile);
+  res.redirect('/guestBook.html');
 });
 app.postprocess(servePage);
 

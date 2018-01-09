@@ -90,8 +90,6 @@ const main = function(req,res){
       if(res.finished) return;
       finalware(req,res);
     });
-
-
   });
 };
 
