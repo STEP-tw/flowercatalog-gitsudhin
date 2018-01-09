@@ -87,6 +87,7 @@ let app = WebApp.create();
 
 app.use(logRequest);
 app.use(loadUser);
+app.get('/',(req,res)=>{res.redirect('index.html')});
 app.get('/login',(req,res)=>{
   res.setHeader('Content-type','text/html');
   if(req.cookies.logInFailed){
