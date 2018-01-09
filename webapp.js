@@ -7,13 +7,10 @@ let redirect = function(path){
 };
 
 let invoke = function(req,res){
-  // console.log(this._handlers['POST']);
-  let handler = this._handlers['POST'][req.url];
+  let handler = this._handlers[req.method][req.url];
   if(!handler){
-    fileNotFoundAction(res);
     return;
   }
-  console.log('hi',handler(req,res));
   handler(req,res);
 };
 
@@ -21,28 +18,25 @@ let urlIsOneOf = function(urls){
   return urls.includes(this.url);
 }
 
-const accumulate = (obj,keyAndValue)=> {
-  let parts = keyAndValue.split('=');
-  obj[parts[0].trim()] = parts[1].trim();
-  return obj;
+const toKeyValue = kv=>{
+    let parts = kv.split('=');
+    return {key:parts[0].trim(),value:parts[1].trim()};
 };
 
-const parseBody = function(text){
-  try{
-    let parsedObj=text.split('&').reduce(accumulate,{});
-    return text && parsedObj|| {};
-  }
-  catch(e){}
-}
+const accumulate = (o,kv)=> {
+  o[kv.key] = kv.value;
+  return o;
+};
 
-const parseCookies = function(text){
+const parseBody = text=> text && text.split('&').map(toKeyValue).reduce(accumulate,{}) || {};
+
+const parseCookies = text=> {
   try {
-    let parsedObj=text.split(';').reduce(accumulate,{}) ;
-    return text && parsedObj|| {};
+    return text && text.split(';').map(toKeyValue).reduce(accumulate,{}) || {};
   }catch(e){
     return {};
   }
-};
+}
 
 const fileNotFoundAction=function(res){
   res.statusCode = 404;
@@ -57,7 +51,6 @@ const initialize = function(){
 };
 
 const get = function(url,handler){
-  console.log("Entering",url);
   this._handlers.GET[url] = handler;
 };
 
@@ -90,13 +83,14 @@ const main = function(req,res){
       middleware(req,res);
     });
 
+    if(res.finished) return;
+    invoke.call(this,req,res);
+
     this._postprocess.forEach(finalware=>{
       if(res.finished) return;
       finalware(req,res);
     });
 
-    if(res.finished) return;
-    invoke.call(this,req,res);
 
   });
 };

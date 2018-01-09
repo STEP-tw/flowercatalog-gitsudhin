@@ -4,7 +4,7 @@ const http = require('http');
 const WebApp = require('./webapp');
 
 let registered_users = [{userName:'bhanutv',name:'Bhanu Teja Verma'},{userName:'harshab',name:'Harsha Vardhana'}];
-// let toStr = obj=>JSON.stringify(obj,null,2);
+let toStr = obj=>JSON.stringify(obj,null,2);
 
 const getContentType=function(extension){
   let contentType={
@@ -33,7 +33,7 @@ const writeToFile=function(content,filename){
 };
 
 const writeComments=function(filename,res){
-  let dbContent=JSON.parse(getFileContent(filename));
+  let dbContent=JSON.parse(fs.readFileSync(filename));
   dbContent.forEach(function(commentData){
     dbContent=`<pre>${commentData.date} ${commentData.name} ${commentData.comment}</pre>`;
     res.write(dbContent);
@@ -42,6 +42,8 @@ const writeComments=function(filename,res){
 
 let logRequest = (req,res)=>{
   console.log(`${timeStamp()} ${req.method} ${req.url}`);
+  console.log(`COOKIES=> ${toStr(req.cookies)}`);
+  console.log(`BODY=> ${toStr(req.body)}`);
 }
 
 let loadUser = (req,res)=>{
@@ -72,28 +74,49 @@ let app = WebApp.create();
 
 app.use(logRequest);
 app.use(loadUser);
-app.get('/guestBook.html',(req,res)=>{
-  serveContent.call(res,'./public/guestBook.html');
-  let dbFile='./data/commentDatabase2.txt';
-  writeComments(dbFile,res);
+app.get('/login',(req,res)=>{
+  res.setHeader('Content-type','text/html');
+  if(req.cookies.logInFailed) res.write('<p>logIn Failed</p>');
+  res.write('<form method="POST"> <input name="userName"><input name="place"> <input type="submit"></form>');
 });
-app.post('/guestBook.html',(req,res)=>{
+app.post('/login',(req,res)=>{
   let user = registered_users.find(u=>u.userName==req.body.userName);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
-    document.getElementsByClassName('loginStatusBlock').innerText="Login Failed";
+    res.redirect('/guestBook.html');
     return;
   }
   let sessionid = new Date().getTime();
   res.setHeader('Set-Cookie',`sessionid=${sessionid}`);
   user.sessionid = sessionid;
-
-  let date=new Date();
-  let dbFile='./data/commentDatabase2.txt';
-  date=date.toLocaleString();
-  req.body.date=date;
-  writeToFile(req.body,dbFile);
   res.redirect('/guestBook.html');
+});
+app.get('/guestBook.html',(req,res)=>{
+  serveContent.call(res,'./public/guestBook.html');
+  if(req.cookies.logInFailed) res.write('<p>logIn Failed</p>');
+  let dbFile='./data/commentDatabase2.txt';
+  writeComments(dbFile,res);
+});
+app.post('/guestBook.html',(req,res)=>{
+  console.log('Entering post');
+  let user = registered_users.find(u=>u.userName==req.body.userName);
+  if(!user) {
+    res.setHeader('Set-Cookie',`logInFailed=true`);
+    // document.getElementsByClassName('loginStatusBlock').innerText="Login Failed";
+    res.redirect('/guestBook.html');
+    return;
+  }else{
+    let sessionid = new Date().getTime();
+    // res.setHeader('Set-Cookie',`sessionid=${sessionid}`);
+    user.sessionid = sessionid;
+
+    let date=new Date();
+    let dbFile='./data/commentDatabase2.txt';
+    date=date.toLocaleString();
+    req.body.date=date;
+    writeToFile(req.body,dbFile);
+    res.redirect('/guestBook.html');
+  }
 });
 app.postprocess(servePage);
 
