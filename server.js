@@ -117,7 +117,9 @@ app.get('/guestBook.html',(req,res)=>{
   let fileContent=getFileContent('./public/guestBook.html');
   let parsedDb=parseToHTML(dbFileContent);
   fileContent=fileContent.replace('USERDATA',parsedDb);
-
+  if(req.user){
+    fileContent=fileContent.replace('Hello User',`Hello ${req.user.name}`);
+  }
   res.write(fileContent);
   res.end();
 });
