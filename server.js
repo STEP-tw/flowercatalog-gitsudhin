@@ -115,7 +115,9 @@ app.post('/login',(req,res)=>{
 app.get('/guestBook.html',(req,res)=>{
   let dbFileContent=JSON.parse(getFileContent('./data/comments.json'));
   let fileContent=getFileContent('./public/guestBook.html');
-  
+  let parsedDb=parseToHTML(dbFileContent);
+  fileContent=fileContent.replace('USERDATA',parsedDb);
+
   res.write(fileContent);
   res.end();
 });
