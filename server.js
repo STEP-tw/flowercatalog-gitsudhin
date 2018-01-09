@@ -30,7 +30,6 @@ const getFileContent=function(file,encoding='utf8'){
 };
 
 const writeToFile=function(content,filename){
-  console.log('Entering');
   let existingData=getFileContent(filename);
   let newData=JSON.parse(existingData);
   newData.unshift(content);
@@ -104,8 +103,6 @@ app.post('/login',(req,res)=>{
     return;
   }else{
     res.setHeader('Set-Cookie',`logInFailed=false`);
-    res.redirect('/login');
-    return
   }
   let sessionid = new Date().getTime();
   res.setHeader('Set-Cookie',`sessionid=${sessionid}`);
