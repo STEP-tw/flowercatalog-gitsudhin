@@ -32,7 +32,7 @@ const writeToFile=function(content,filename){
   fs.writeFileSync(filename,JSON.stringify(newData));
 };
 
-const writeComments=function(filename){
+const writeComments=function(filename,res){
   let dbContent=JSON.parse(getFileContent(filename));
   dbContent.forEach(function(commentData){
     dbContent=`<pre>${commentData.date} ${commentData.name} ${commentData.comment}</pre>`;
@@ -52,17 +52,20 @@ let loadUser = (req,res)=>{
   }
 };
 
-let serveContent=function(req,res){
-  let fileUrl='./public'+req.url;
-
+const serveContent=function(fileUrl){
   if(fs.existsSync(fileUrl)){
     try{
       let fileContent=fs.readFileSync(fileUrl);
-      setContentType(fileUrl,res);
-      res.write(fileContent);
-      res.end();
+      setContentType(fileUrl,this);
+      this.write(fileContent);
+      this.end();
     }catch(ex){}
   }
+};
+
+let servePage=function(req,res){
+  let fileUrl='./public'+req.url;
+  serveContent.call(res,fileUrl);
 };
 
 let app = WebApp.create();
@@ -70,14 +73,14 @@ let app = WebApp.create();
 app.use(logRequest);
 app.use(loadUser);
 app.get('/guestBook.html',(req,res)=>{
+  serveContent.call(res,'./public/guestBook.html');
   let dbFile='./data/commentDatabase2.txt';
-  writeComments(dbFile);
-})
+  writeComments(dbFile,res);
+});
 app.post('/guestBook.html',(req,res)=>{
   let user = registered_users.find(u=>u.userName==req.body.userName);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
-    // res.redirect('/guestBook.html');
     document.getElementsByClassName('loginStatusBlock').innerText="Login Failed";
     return;
   }
@@ -90,8 +93,9 @@ app.post('/guestBook.html',(req,res)=>{
   date=date.toLocaleString();
   req.body.date=date;
   writeToFile(req.body,dbFile);
+  res.redirect('/guestBook.html');
 });
-app.postprocess(serveContent);
+app.postprocess(servePage);
 
 const PORT = 5000;
 let server = http.createServer(app);
