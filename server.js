@@ -116,6 +116,8 @@ const serveGuestBookPage=function(req,res){
   fileContent=fileContent.replace('USERDATA',parsedDb);
   if(req.user){
     fileContent=fileContent.replace('Hello User',`Hello ${req.user.name}`);
+    fileContent=fileContent.replace('hidden','visible');
+    fileContent=fileContent.replace('Visible','hidden');
   }
   res.write(fileContent);
   res.end();
@@ -146,6 +148,11 @@ app.get('/login.html',getLoginPage);
 app.post('/login.html',validatePostUserData);
 app.get('/guestBook.html',serveGuestBookPage);
 app.post('/guestBook.html',addNewComment);
+app.get('/logout',(req,res)=>{
+  res.setHeader('Set-Cookie',[`loginFailed=false,Expires=${new Date(1).toUTCString()}`,`sessionid=0,Expires=${new Date(1).toUTCString()}`]);
+  delete req.user.sessionid;
+  res.redirect('/guestBook.html');
+});
 
 app.postprocess(servePage);
 
