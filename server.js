@@ -87,11 +87,12 @@ const parseToHTML=function(commentsList){
 };
 
 const getLoginPage=function(req,res){
+  let fileContent=getFileContent('./public/login.html');
   res.setHeader('Content-type','text/html');
   if(req.cookies.logInFailed){
     res.write('<p>Login</p>');
   }
-  res.write('<form method="POST"> <input name="userName"><input type="submit"></form>');
+  res.write(fileContent);
   res.end();
 };
 
@@ -99,7 +100,7 @@ const validatePostUserData=function(req,res){
   let user = registered_users.find(u=>u.userName==req.body.userName);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
-    res.redirect('/login');
+    res.redirect('/login.html');
     return;
   }
   let sessionid = new Date().getTime();
@@ -123,7 +124,7 @@ const serveGuestBookPage=function(req,res){
 const addNewComment=function(req,res){
   if(!req.user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
-    res.redirect('/login');
+    res.redirect('/login.html');
     return;
   }
 
@@ -141,8 +142,8 @@ app.use(logRequest);
 app.use(loadUser);
 
 app.get('/',(req,res)=>{res.redirect('index.html')});
-app.get('/login',getLoginPage);
-app.post('/login',validatePostUserData);
+app.get('/login.html',getLoginPage);
+app.post('/login.html',validatePostUserData);
 app.get('/guestBook.html',serveGuestBookPage);
 app.post('/guestBook.html',addNewComment);
 
