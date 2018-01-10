@@ -3,8 +3,7 @@ const timeStamp = require('./time.js').timeStamp;
 const http = require('http');
 const WebApp = require('./webapp');
 
-let registered_users = [{userName:'sudhin',name:'Sudhin MN'}];
-
+let registered_users = [{userName:'sudhin',name:'Sudhin MN',password:'123'}];
 
 let toStr = obj=>JSON.stringify(obj,null,2);
 
@@ -90,14 +89,14 @@ const getLoginPage=function(req,res){
   let fileContent=getFileContent('./public/login.html');
   res.setHeader('Content-type','text/html');
   if(req.cookies.logInFailed){
-    res.write('<p>Login</p>');
+    res.write('<p>Login first to comment </p>');
   }
   res.write(fileContent);
   res.end();
 };
 
 const validatePostUserData=function(req,res){
-  let user = registered_users.find(u=>u.userName==req.body.userName);
+  let user = registered_users.find(u=>u.userName==req.body.userName&&u.password==req.body.pwd);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
     res.redirect('/login.html');
@@ -138,6 +137,12 @@ const addNewComment=function(req,res){
   res.redirect('/guestBook.html');
 };
 
+const logoutUser=function(req,res){
+  res.setHeader('Set-Cookie',[`loginFailed=false,Expires=${new Date(1).toUTCString()}`,`sessionid=0,Expires=${new Date(1).toUTCString()}`]);
+  delete req.user.sessionid;
+  res.redirect('/guestBook.html');
+}
+
 let app = WebApp.create();
 
 app.use(logRequest);
@@ -148,11 +153,7 @@ app.get('/login.html',getLoginPage);
 app.post('/login.html',validatePostUserData);
 app.get('/guestBook.html',serveGuestBookPage);
 app.post('/guestBook.html',addNewComment);
-app.get('/logout',(req,res)=>{
-  res.setHeader('Set-Cookie',[`loginFailed=false,Expires=${new Date(1).toUTCString()}`,`sessionid=0,Expires=${new Date(1).toUTCString()}`]);
-  delete req.user.sessionid;
-  res.redirect('/guestBook.html');
-});
+app.get('/logout',logoutUser);
 
 app.postprocess(servePage);
 
