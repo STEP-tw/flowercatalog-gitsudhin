@@ -89,9 +89,9 @@ const parseToHTML=function(commentsList){
 const getLoginPage=function(req,res){
   res.setHeader('Content-type','text/html');
   if(req.cookies.logInFailed){
-    res.write('<p>Login Failed</p>');
+    res.write('<p>Login</p>');
   }
-  res.write('<form method="POST"> <input name="userName"><input name="place"> <input type="submit"></form>');
+  res.write('<form method="POST"> <input name="userName"><input type="submit"></form>');
   res.end();
 };
 
@@ -121,17 +121,11 @@ const serveGuestBookPage=function(req,res){
 };
 
 const addNewComment=function(req,res){
-  let user = registered_users.find(u=>u.userName==req.body.name);
-  if(!user) {
+  if(!req.user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
     res.redirect('/login');
     return;
-  }else{
-    res.setHeader('Set-Cookie',`logInFailed=false`);
   }
-  let sessionid = new Date().getTime();
-  res.setHeader('Set-Cookie','sessionid=${sessionid}');
-  user.sessionid = sessionid;
 
   let date=new Date();
   let dbFile='./data/comments.json';
@@ -145,11 +139,13 @@ let app = WebApp.create();
 
 app.use(logRequest);
 app.use(loadUser);
+
 app.get('/',(req,res)=>{res.redirect('index.html')});
 app.get('/login',getLoginPage);
 app.post('/login',validatePostUserData);
 app.get('/guestBook.html',serveGuestBookPage);
 app.post('/guestBook.html',addNewComment);
+
 app.postprocess(servePage);
 
 const PORT = 5000;
