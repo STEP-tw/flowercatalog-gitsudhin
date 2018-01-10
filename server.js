@@ -95,8 +95,12 @@ const getLoginPage=function(req,res){
   res.end();
 };
 
+const getUserData=function(req){
+  return registered_users.find(u=>u.userName==req.body.userName&&u.password==req.body.pwd);
+};
+
 const validatePostUserData=function(req,res){
-  let user = registered_users.find(u=>u.userName==req.body.userName&&u.password==req.body.pwd);
+  let user = getUserData(req);
   if(!user) {
     res.setHeader('Set-Cookie',`logInFailed=true`);
     res.redirect('/login.html');
@@ -115,7 +119,7 @@ const serveGuestBookPage=function(req,res){
   fileContent=fileContent.replace('USERDATA',parsedDb);
   if(req.user){
     fileContent=fileContent.replace('Hello User',`Hello ${req.user.name}`);
-    fileContent=fileContent.replace('hidden','visible');
+    fileContent=fileContent.replace(/hidden/gi,'visible');
     fileContent=fileContent.replace('Visible','hidden');
   }
   res.write(fileContent);
